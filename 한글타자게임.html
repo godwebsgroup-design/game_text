@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>한글 타자 게임 🌟</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nanum+Round+Square:wght@400;700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Nanum Round Square', 'Malgun Gothic', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+    height: 100vh;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  #game-container {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* 배경 별들 */
+  .star {
+    position: absolute;
+    border-radius: 50%;
+    animation: twinkle 2s infinite alternate;
+    pointer-events: none;
+  }
+
+  @keyframes twinkle {
+    0% { opacity: 0.3; transform: scale(1); }
+    100% { opacity: 1; transform: scale(1.3); }
+  }
+
+  /* 상단 HUD */
+  #hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, transparent 100%);
+    backdrop-filter: blur(8px);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid rgba(255,255,255,0.3);
+  }
+
+  #title {
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    text-shadow: 2px 2px 0 #ff6b9d, 4px 4px 0 rgba(0,0,0,0.2);
+    letter-spacing: 2px;
+  }
+
+  .hud-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(255,255,255,0.2);
+    border-radius: 12px;
+    padding: 6px 18px;
+    border: 2px solid rgba(255,255,255,0.4);
+  }
+
+  .hud-label {
+    font-size: 11px;
+    color: rgba(255,255,255,0.8);
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .hud-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+  }
+
+  #level-value { color: #ffe066; }
+  #score-value { color: #80ffcc; }
+  #lives-value { color: #ff7eb3; font-size: 20px; }
+
+  /* 게임 영역 */
+  #game-area {
+    position: absolute;
+    top: 70px;
+    left: 0;
+    right: 0;
+    bottom: 120px;
+  }
+
+  /* 떨어지는 단어 */
+  .falling-word {
+    position: absolute;
+    font-size: 20px;
+    font-weight: 800;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: default;
+    white-space: nowrap;
+    transition: transform 0.1s;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    border: 3px solid rgba(255,255,255,0.5);
+    letter-spacing: 1px;
+  }
+
+  .falling-word.matched {
+    animation: burst 0.4s forwards;
+  }
+
+  @keyframes burst {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.6); opacity: 0.8; }
+    100% { transform: scale(0); opacity: 0; }
+  }
+
+  /* 단어 색상 팔레트 */
+  .color-0 { background: linear-gradient(135deg, #ff6b6b, #ee5a24); color: #fff; }
+  .color-1 { background: linear-gradient(135deg, #ffd93d, #f9ca24); color: #333; }
+  .color-2 { background: linear-gradient(135deg, #6bcb77, #2ecc71); color: #fff; }
+  .color-3 { background: linear-gradient(135deg, #4d96ff, #0984e3); color: #fff; }
+  .color-4 { background: linear-gradient(135deg, #ff6fd8, #e84393); color: #fff; }
+  .color-5 { background: linear-gradient(135deg, #a29bfe, #6c5ce7); color: #fff; }
+  .color-6 { background: linear-gradient(135deg, #fd9644, #e17055); color: #fff; }
+  .color-7 { background: linear-gradient(135deg, #55efc4, #00b894); color: #333; }
+
+  /* 하단 입력 영역 */
+  #input-area {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 120px;
+    background: linear-gradient(0deg, rgba(255,255,255,0.25) 0%, transparent 100%);
+    backdrop-filter: blur(8px);
+    border-top: 2px solid rgba(255,255,255,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 0 20px;
+  }
+
+  #word-input {
+    font-family: 'Nanum Round Square', 'Malgun Gothic', sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+    padding: 12px 24px;
+    border-radius: 50px;
+    border: 3px solid rgba(255,255,255,0.6);
+    background: rgba(255,255,255,0.9);
+    color: #5f27cd;
+    outline: none;
+    width: 340px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15), inset 0 2px 4px rgba(0,0,0,0.05);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    letter-spacing: 2px;
+  }
+
+  #word-input:focus {
+    border-color: #ff6b9d;
+    box-shadow: 0 4px 20px rgba(255,107,157,0.4), inset 0 2px 4px rgba(0,0,0,0.05);
+  }
+
+  #word-input.correct-flash {
+    background: #d4ffd4;
+    border-color: #2ecc71;
+  }
+
+  #word-input.wrong-flash {
+    background: #ffd4d4;
+    border-color: #e74c3c;
+    animation: shake 0.3s;
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-8px); }
+    75% { transform: translateX(8px); }
+  }
+
+  #submit-btn {
+    font-family: 'Nanum Round Square', 'Malgun Gothic', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    padding: 13px 28px;
+    border-radius: 50px;
+    border: none;
+    background: linear-gradient(135deg, #ff6b9d, #c44569);
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(255,107,157,0.4);
+    transition: transform 0.1s, box-shadow 0.1s;
+    letter-spacing: 1px;
+  }
+
+  #submit-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,107,157,0.5); }
+  #submit-btn:active { transform: translateY(0); }
+
+  /* 폭발 파티클 */
+  .particle {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: particle-fly 0.6s forwards;
+  }
+
+  @keyframes particle-fly {
+    0% { transform: translate(0,0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+  }
+
+  /* +점수 표시 */
+  .score-popup {
+    position: absolute;
+    font-size: 22px;
+    font-weight: 800;
+    color: #ffe066;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+    pointer-events: none;
+    animation: score-rise 0.8s forwards;
+    z-index: 200;
+  }
+
+  @keyframes score-rise {
+    0% { transform: translateY(0) scale(1); opacity: 1; }
+    100% { transform: translateY(-60px) scale(1.2); opacity: 0; }
+  }
+
+  /* 레벨업 오버레이 */
+  #levelup-overlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 300;
+    background: rgba(0,0,0,0.3);
+    backdrop-filter: blur(4px);
+  }
+
+  #levelup-overlay.show { display: flex; }
+
+  .levelup-box {
+    background: linear-gradient(135deg, #ffd93d, #ff6b6b);
+    border-radius: 30px;
+    padding: 40px 60px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    border: 4px solid rgba(255,255,255,0.5);
+    animation: pop-in 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  }
+
+  @keyframes pop-in {
+    0% { transform: scale(0); }
+    100% { transform: scale(1); }
+  }
+
+  .levelup-emoji { font-size: 60px; }
+  .levelup-text { font-size: 36px; font-weight: 800; color: #fff; text-shadow: 3px 3px 0 rgba(0,0,0,0.2); margin: 10px 0; }
+  .levelup-sub { font-size: 18px; color: rgba(255,255,255,0.9); }
+
+  /* 게임오버 */
+  #gameover-overlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 300;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(6px);
+  }
+
+  #gameover-overlay.show { display: flex; }
+
+  .gameover-box {
+    background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+    border-radius: 30px;
+    padding: 50px 70px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    border: 4px solid rgba(255,255,255,0.4);
+    animation: pop-in 0.5s cubic-bezier(0.34,1.56,0.64,1);
+  }
+
+  .gameover-emoji { font-size: 70px; }
+  .gameover-title { font-size: 40px; font-weight: 800; color: #fff; text-shadow: 3px 3px 0 rgba(0,0,0,0.2); margin: 10px 0; }
+  .gameover-score { font-size: 22px; color: #ffe066; font-weight: 700; margin: 8px 0; }
+  .gameover-level { font-size: 18px; color: rgba(255,255,255,0.85); margin-bottom: 24px; }
+
+  #restart-btn {
+    font-family: 'Nanum Round Square', 'Malgun Gothic', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    padding: 14px 40px;
+    border-radius: 50px;
+    border: none;
+    background: linear-gradient(135deg, #ffd93d, #ff6b6b);
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(255,107,157,0.4);
+    letter-spacing: 1px;
+    transition: transform 0.1s;
+  }
+
+  #restart-btn:hover { transform: scale(1.05); }
+
+  /* 시작화면 */
+  #start-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 300;
+    background: linear-gradient(135deg, rgba(102,126,234,0.9), rgba(240,147,251,0.9));
+    backdrop-filter: blur(4px);
+  }
+
+  .start-box {
+    background: rgba(255,255,255,0.15);
+    border-radius: 30px;
+    padding: 50px 70px;
+    text-align: center;
+    border: 3px solid rgba(255,255,255,0.4);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  .start-title { font-size: 44px; font-weight: 800; color: #fff; text-shadow: 3px 3px 0 rgba(0,0,0,0.2); letter-spacing: 3px; }
+  .start-emoji { font-size: 70px; margin: 10px 0; }
+  .start-desc { font-size: 17px; color: rgba(255,255,255,0.9); line-height: 1.7; margin: 16px 0; }
+  .start-desc span { font-weight: 800; color: #ffe066; }
+
+  #start-btn {
+    font-family: 'Nanum Round Square', 'Malgun Gothic', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    padding: 16px 50px;
+    border-radius: 50px;
+    border: none;
+    background: linear-gradient(135deg, #ff6b9d, #ffd93d);
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 6px 25px rgba(255,107,157,0.5);
+    letter-spacing: 2px;
+    margin-top: 10px;
+    transition: transform 0.15s;
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.15);
+  }
+
+  #start-btn:hover { transform: scale(1.08); }
+
+  /* 진행바 */
+  #progress-bar-container {
+    position: absolute;
+    top: 65px;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: rgba(255,255,255,0.2);
+    z-index: 99;
+  }
+
+  #progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #ffe066, #ff6b9d);
+    transition: width 0.3s;
+    box-shadow: 0 0 8px rgba(255,107,157,0.6);
+  }
+
+  /* 콤보 표시 */
+  #combo-display {
+    position: absolute;
+    top: 85px;
+    right: 20px;
+    font-size: 28px;
+    font-weight: 800;
+    color: #ffe066;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+    z-index: 150;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  #combo-display.visible { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="game-container">
+
+  <!-- 배경 별들 (JS로 생성) -->
+
+  <!-- 상단 HUD -->
+  <div id="hud">
+    <div id="title">⭐ 한글 타자 게임</div>
+    <div class="hud-stat">
+      <span class="hud-label">단계</span>
+      <span class="hud-value" id="level-value">1</span>
+    </div>
+    <div class="hud-stat">
+      <span class="hud-label">점수</span>
+      <span class="hud-value" id="score-value">0</span>
+    </div>
+    <div class="hud-stat">
+      <span class="hud-label">생명</span>
+      <span class="hud-value" id="lives-value">❤️❤️❤️</span>
+    </div>
+  </div>
+
+  <!-- 레벨 진행바 -->
+  <div id="progress-bar-container">
+    <div id="progress-bar" style="width:0%"></div>
+  </div>
+
+  <!-- 콤보 -->
+  <div id="combo-display">🔥 3콤보!</div>
+
+  <!-- 게임 영역 -->
+  <div id="game-area"></div>
+
+  <!-- 하단 입력 -->
+  <div id="input-area">
+    <input type="text" id="word-input" placeholder="단어를 입력하세요..." autocomplete="off" spellcheck="false">
+    <button id="submit-btn">입력 ✓</button>
+  </div>
+
+  <!-- 레벨업 -->
+  <div id="levelup-overlay">
+    <div class="levelup-box">
+      <div class="levelup-emoji">🎉</div>
+      <div class="levelup-text" id="levelup-text">레벨 업!</div>
+      <div class="levelup-sub">더 빨라졌어요! 화이팅! 💪</div>
+    </div>
+  </div>
+
+  <!-- 게임오버 -->
+  <div id="gameover-overlay">
+    <div class="gameover-box">
+      <div class="gameover-emoji">😢</div>
+      <div class="gameover-title">게임 오버!</div>
+      <div class="gameover-score" id="final-score">최종 점수: 0점</div>
+      <div class="gameover-level" id="final-level">최고 단계: 1단계</div>
+      <button id="restart-btn">🔄 다시 하기</button>
+    </div>
+  </div>
+
+  <!-- 시작화면 -->
+  <div id="start-overlay">
+    <div class="start-box">
+      <div class="start-title">⌨️ 한글 타자 게임</div>
+      <div class="start-emoji">🌈✨🎮</div>
+      <div class="start-desc">
+        하늘에서 <span>한글 단어</span>가 내려와요!<br>
+        단어를 읽고 <span>빠르게 타이핑</span>해서 없애세요!<br>
+        바닥에 닿으면 생명이 줄어들어요 💔<br>
+        단계가 올라갈수록 <span>더 빨라져요!</span>
+      </div>
+      <button id="start-btn">🎮 게임 시작!</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ===== 단어 목록 (초등학생 수준, 레벨별) =====
+const WORDS = {
+  1: ['사과','나무','하늘','바다','강아지','고양이','학교','집','책','꽃','태양','달','별','구름','비','눈','바람','물','불','흙'],
+  2: ['사랑해','감사해','안녕하세요','행복','기쁨','슬픔','화이팅','친구','가족','선생님','도서관','운동장','교실','급식','수업'],
+  3: ['아기자기','부서지다','즉즉하다','사흘놀이','봄바람','여름날','가을밤','겨울철','무지개','나비효과','꿈나라','하늘빛'],
+  4: ['반짝반짝','뒹굴뒹굴','살랑살랑','두근두근','빙글빙글','졸졸졸졸','쿵쾅쿵쾅','방글방글','싱글벙글','울긋불긋'],
+  5: ['대한민국','독립운동','세종대왕','한글창제','거북선','이순신','태극기','민주주의','자유평등','행복한나라'],
+};
+
+// ===== 사운드 시스템 (Web Audio API) =====
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+
+function getAudio() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+// 기본 oscillator 헬퍼
+function playTone(freq, type, startTime, duration, gainVal, ctx) {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, startTime);
+  gain.gain.setValueAtTime(gainVal, startTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+  osc.start(startTime);
+  osc.stop(startTime + duration);
+}
+
+// 키 타이핑 소리 (클릭감)
+function sfxType() {
+  const ctx = getAudio();
+  const t = ctx.currentTime;
+  playTone(800, 'square', t, 0.05, 0.08, ctx);
+}
+
+// 단어 맞추기 성공
+function sfxSuccess(combo) {
+  const ctx = getAudio();
+  const t = ctx.currentTime;
+  // 콤보에 따라 더 높은 음
+  const baseNote = 440 + (combo - 1) * 40;
+  const notes = [baseNote, baseNote * 1.25, baseNote * 1.5];
+  notes.forEach((freq, i) => {
+    playTone(freq, 'sine', t + i * 0.07, 0.18, 0.18, ctx);
+  });
+  // 반짝 하이 노트
+  playTone(baseNote * 2, 'sine', t + 0.15, 0.12, 0.1, ctx);
+}
+
+// 콤보 3이상 특별 소리
+function sfxCombo(combo) {
+  const ctx = getAudio();
+  const t = ctx.currentTime;
+  const scale = [523, 659, 784, 1047]; // C5 E5 G5 C6
+  scale.forEach((freq, i) => {
+    playTone(freq, 'sine', t + i * 0.06, 0.2, 0.15, ctx);
+  });
+}
+
+// 틀렸을 때
+function sfxWrong() {
+  const ctx = getAudio();
+  const t = ctx.currentTime;
+  playTone(200, 'sawtooth', t, 0.08, 0.12, ctx);
+  playTone(150, 'sawtooth', t + 0.08, 0.1, 0.1, ctx);
+}
+
+// 생명 잃기
+function sfxLoseLife() {
+  const ctx = getAudio();
+  const t = ctx.currentTime;
+  [300, 250, 180].forEach((freq, i) => {
+    playTone(freq, 'sawtooth', t + i * 0.1, 0.15, 0.15, ctx);
+  });
+  // 낮은 쿵
+  const buf = ctx.createBuffer(1, ctx.sampleRate * 0.3, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) {
+    data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.05));
+  }
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.3, t + 0.25);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
+  src.connect(g);
+  g.connect(ctx.destination);
+  src.start(t + 0.25);
+}
+
+// 레벨업 팡파르
+function sfxLevelUp() {
+  const ctx = getAudio();
+  const t = ctx.currentTime;
+  // 신나는 상승 멜로디
+  const melody = [
+    [523, 0.00], [659, 0.10], [784, 0.20], [1047, 0.32],
+    [784, 0.45], [1047, 0.55], [1319, 0.65],
+  ];
+  melody.forEach(([freq, dt]) => {
+    playTone(freq, 'sine', t + dt, 0.18, 0.2, ctx);
+    playTone(freq * 0.5, 'sine', t + dt, 0.18, 0.08, ctx);
+  });
+}
+
+// 게임 오버
+function sfxGameOver() {
+  const ctx = getAudio();
+  const t = ctx.currentTime;
+  const sad = [392, 349, 330, 294, 262];
+  sad.forEach((freq, i) => {
+    playTone(freq, 'sine', t + i * 0.18, 0.25, 0.18, ctx);
+    playTone(freq * 0.5, 'sine', t + i * 0.18, 0.25, 0.06, ctx);
+  });
+}
+
+// 게임 시작 징글
+function sfxStart() {
+  const ctx = getAudio();
+  const t = ctx.currentTime;
+  const jingle = [523, 659, 784, 1047, 784, 1047, 1319];
+  jingle.forEach((freq, i) => {
+    playTone(freq, 'sine', t + i * 0.08, 0.15, 0.18, ctx);
+  });
+}
+
+// ===== BGM — 칩튠 스타일 (4마디 A+B 구성, 반복) =====
+let bgmTimers = [];
+let bgmRunning = false;
+
+function stopBGM() {
+  bgmRunning = false;
+  bgmTimers.forEach(clearTimeout);
+  bgmTimers = [];
+}
+
+function startBGM() {
+  stopBGM();
+  const ctx = getAudio();
+  bgmRunning = true;
+
+  const BPM = 138;
+  const B  = 60 / BPM;          // 1박 길이(초)
+  const S  = B / 2;              // 8분음표
+  const E  = B / 4;              // 16분음표
+
+  // ── 음표 헬퍼 ──────────────────────────────────────
+  function note(freq, t, dur, vol, type = 'square') {
+    if (!bgmRunning) return;
+    const osc = ctx.createOscillator();
+    const g   = ctx.createGain();
+    // 볼륨 마스터 낮게 유지 (BGM은 효과음 방해 안 되도록)
+    const master = ctx.createGain();
+    master.gain.value = 0.13;
+    osc.connect(g); g.connect(master); master.connect(ctx.destination);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur * 0.92);
+    osc.start(t); osc.stop(t + dur);
+  }
+
+  // 킥드럼 (사인 피치다운)
+  function kick(t) {
+    if (!bgmRunning) return;
+    const osc = ctx.createOscillator();
+    const g   = ctx.createGain();
+    const m   = ctx.createGain(); m.gain.value = 0.5;
+    osc.connect(g); g.connect(m); m.connect(ctx.destination);
+    osc.frequency.setValueAtTime(160, t);
+    osc.frequency.exponentialRampToValueAtTime(40, t + 0.12);
+    g.gain.setValueAtTime(1, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    osc.start(t); osc.stop(t + 0.2);
+  }
+
+  // 스네어 (노이즈)
+  function snare(t) {
+    if (!bgmRunning) return;
+    const buf  = ctx.createBuffer(1, ctx.sampleRate * 0.12, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random()*2-1) * Math.exp(-i/(ctx.sampleRate*0.03));
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const g   = ctx.createGain();
+    const m   = ctx.createGain(); m.gain.value = 0.22;
+    src.connect(g); g.connect(m); m.connect(ctx.destination);
+    g.gain.setValueAtTime(1, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    src.start(t);
+  }
+
+  // 하이햇
+  function hihat(t, open = false) {
+    if (!bgmRunning) return;
+    const buf  = ctx.createBuffer(1, ctx.sampleRate * (open ? 0.18 : 0.05), ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random()*2-1;
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const hpf = ctx.createBiquadFilter(); hpf.type = 'highpass'; hpf.frequency.value = 7000;
+    const g   = ctx.createGain();
+    const m   = ctx.createGain(); m.gain.value = 0.08;
+    src.connect(hpf); hpf.connect(g); g.connect(m); m.connect(ctx.destination);
+    g.gain.setValueAtTime(1, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + (open ? 0.18 : 0.05));
+    src.start(t);
+  }
+
+  // ── 음계 (C장조) ──────────────────────────────────
+  // 4옥타브  C4=261 D=294 E=329 F=349 G=392 A=440 B=494
+  // 5옥타브  C5=523 D=587 E=659 F=698 G=784 A=880 B=988
+  // 6옥타브  C6=1047
+  const C4=261,D4=294,E4=329,F4=349,G4=392,A4=440,B4=494;
+  const C5=523,D5=587,E5=659,F5=698,G5=784,A5=880,B5=988;
+  const C6=1047,E6=1319,G6=1568;
+
+  // ── A섹션 멜로디 (8박 = 2마디) ───────────────────
+  //   경쾌하고 귀여운 칩튠 느낌
+  const melA = [
+    // [음높이, 시작(박), 길이(박)]
+    [E5, 0,   S], [G5, S,   S], [A5, B,   B ], [G5, 2*B, S],
+    [E5, 2.5*B,S],[C5,3*B,  B ], [D5, 4*B, S], [E5, 4.5*B,S],
+    [G5, 5*B, B ], [A5,6*B, S], [C6, 6.5*B,S],[A5,7*B,  B ],
+  ];
+
+  // ── B섹션 멜로디 (8박) ────────────────────────────
+  const melB = [
+    [C6, 0,   S], [B5, S,   S], [A5, B,   S], [G5, 1.5*B,S],
+    [A5, 2*B, B ], [E5,3*B, B ], [F5, 4*B, S], [A5, 4.5*B,S],
+    [G5, 5*B, B ], [E5,6*B, S], [D5, 6.5*B,S],[C5, 7*B, B ],
+  ];
+
+  // ── 화음 (왼손 반주) ─────────────────────────────
+  // 코드 진행: C - Am - F - G (4박씩)
+  const chordA = [
+    [[C4,E4,G4], 0  , 2*B],
+    [[A4*.5,C4,E4], 2*B, 2*B],  // Am/A3
+    [[F4*.5,C4,F4], 4*B, 2*B],
+    [[G4*.5,B4*.5,D5], 6*B, 2*B],
+  ];
+
+  const chordB = [
+    [[C4,E4,G4], 0  , 2*B],
+    [[A4*.5,E4,A4], 2*B,2*B],
+    [[F4*.5,A4*.5,C5], 4*B, 2*B],
+    [[G4*.5,D5*.5,G5*.5], 6*B, 2*B],
+  ];
+
+  // ── 베이스라인 ────────────────────────────────────
+  const bassA = [
+    [C4*.5, 0,   S*0.8], [C4*.5, B,   S*0.8],
+    [A4*.25,2*B, S*0.8], [A4*.25,3*B, S*0.8],
+    [F4*.25,4*B, S*0.8], [F4*.25,5*B, S*0.8],
+    [G4*.25,6*B, S*0.8], [G4*.25,7*B, S*0.8],
+  ];
+
+  // ── 드럼 패턴 (8박 반복) ────────────────────────
+  function drums(t0) {
+    for (let b = 0; b < 8; b++) {
+      const t = t0 + b * B;
+      if (b % 4 === 0) kick(t);                    // 1,5박 킥
+      if (b === 1 || b === 3 || b === 5 || b === 7) snare(t); // 2,4,6,8박 스네어
+      // 하이햇 8분
+      hihat(t);
+      hihat(t + S, b % 4 === 3);                   // 마지막 전 오픈햇
+    }
+  }
+
+  // ── 전체 스케줄러 ─────────────────────────────────
+  const barLen = B * 8;   // 8박 = 한 섹션
+
+  function scheduleSection(mel, chords, bass, t0) {
+    // 멜로디
+    mel.forEach(([freq, dt, dur]) => note(freq, t0+dt, dur, 1, 'square'));
+    // 화음 (부드러운 sine)
+    chords.forEach(([freqs, dt, dur]) =>
+      freqs.forEach(f => note(f, t0+dt, dur, 0.5, 'sine'))
+    );
+    // 베이스 (triangle)
+    bass.forEach(([freq, dt, dur]) => note(freq, t0+dt, dur, 0.9, 'triangle'));
+    // 드럼
+    drums(t0);
+  }
+
+  // 루프: A → B → A → B → …
+  let loopCount = 0;
+  let nextBar = ctx.currentTime + 0.05;
+
+  function loopTick() {
+    if (!bgmRunning) return;
+    const isA = loopCount % 2 === 0;
+    scheduleSection(
+      isA ? melA : melB,
+      isA ? chordA : chordB,
+      bassA,
+      nextBar
+    );
+    nextBar += barLen;
+    loopCount++;
+    // 다음 섹션 시작 50ms 전에 스케줄
+    const delay = (nextBar - ctx.currentTime - 0.1) * 1000;
+    bgmTimers.push(setTimeout(loopTick, Math.max(delay, 0)));
+  }
+
+  loopTick();
+}
+
+// ===== 게임 상태 =====
+let state = {
+  running: false,
+  score: 0,
+  level: 1,
+  lives: 3,
+  combo: 0,
+  words: [],
+  spawnInterval: null,
+  animFrame: null,
+  levelThreshold: 300,
+  scoreForLevel: 0,
+  wordPool: [],
+  usedWords: new Set(),
+};
+
+// ===== DOM =====
+const gameArea = document.getElementById('game-area');
+const wordInput = document.getElementById('word-input');
+const scoreEl = document.getElementById('score-value');
+const levelEl = document.getElementById('level-value');
+const livesEl = document.getElementById('lives-value');
+const progressBar = document.getElementById('progress-bar');
+const comboDisplay = document.getElementById('combo-display');
+const levelupOverlay = document.getElementById('levelup-overlay');
+const gameoverOverlay = document.getElementById('gameover-overlay');
+const startOverlay = document.getElementById('start-overlay');
+let comboTimer = null;
+
+// ===== 배경 별 생성 =====
+function createStars() {
+  const container = document.getElementById('game-container');
+  for (let i = 0; i < 30; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    const size = Math.random() * 8 + 3;
+    star.style.cssText = `
+      width:${size}px; height:${size}px;
+      left:${Math.random()*100}%;
+      top:${Math.random()*100}%;
+      background:rgba(255,255,255,${Math.random()*0.5+0.3});
+      animation-delay:${Math.random()*2}s;
+      animation-duration:${Math.random()*2+1.5}s;
+    `;
+    container.appendChild(star);
+  }
+}
+
+// ===== 단어 풀 빌드 =====
+function buildWordPool() {
+  const lvl = Math.min(state.level, 5);
+  let pool = [];
+  for (let l = 1; l <= lvl; l++) {
+    const ratio = l === lvl ? 3 : 1;
+    for (let r = 0; r < ratio; r++) pool = pool.concat(WORDS[l]);
+  }
+  state.wordPool = pool;
+}
+
+function getRandomWord() {
+  const available = state.wordPool.filter(w => !state.usedWords.has(w));
+  if (available.length === 0) { state.usedWords.clear(); return getRandomWord(); }
+  const w = available[Math.floor(Math.random() * available.length)];
+  state.usedWords.add(w);
+  return w;
+}
+
+// ===== 단어 생성 =====
+function spawnWord() {
+  if (!state.running) return;
+  const text = getRandomWord();
+  const colorIdx = Math.floor(Math.random() * 8);
+
+  const el = document.createElement('div');
+  el.className = `falling-word color-${colorIdx}`;
+  el.textContent = text;
+
+  const areaWidth = gameArea.offsetWidth;
+  const wordWidth = text.length * 22 + 40;
+  const x = Math.random() * (areaWidth - wordWidth - 20) + 10;
+
+  el.style.left = x + 'px';
+  el.style.top = '-50px';
+  gameArea.appendChild(el);
+
+  const speed = 0.6 + (state.level - 1) * 0.35;
+  state.words.push({ el, text, y: -50, speed });
+}
+
+// ===== 게임 루프 =====
+function gameLoop() {
+  if (!state.running) return;
+
+  const areaHeight = gameArea.offsetHeight;
+
+  state.words = state.words.filter(word => {
+    if (word.removing) return false;
+
+    word.y += word.speed;
+    word.el.style.top = word.y + 'px';
+
+    if (word.y > areaHeight) {
+      word.el.remove();
+      loseLife(word);
+      return false;
+    }
+    return true;
+  });
+
+  state.animFrame = requestAnimationFrame(gameLoop);
+}
+
+// ===== 생명 감소 =====
+function loseLife(word) {
+  state.lives--;
+  state.combo = 0;
+  updateCombo();
+  updateLives();
+
+  sfxLoseLife();
+  // 화면 빨간 깜박
+  document.body.style.background = 'linear-gradient(135deg, #e74c3c, #c0392b)';
+  setTimeout(() => {
+    document.body.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)';
+  }, 300);
+
+  if (state.lives <= 0) {
+    setTimeout(gameOver, 200);
+  }
+}
+
+// ===== 입력 처리 =====
+function checkInput() {
+  const typed = wordInput.value.trim();
+  if (!typed) return;
+
+  let matched = false;
+  for (let i = 0; i < state.words.length; i++) {
+    const word = state.words[i];
+    if (word.text === typed && !word.removing) {
+      matched = true;
+      word.removing = true;
+
+      // 터짐 애니메이션
+      word.el.classList.add('matched');
+      createParticles(word.el);
+      showScorePopup(word.el);
+      if (state.combo >= 2) sfxCombo(state.combo); else sfxSuccess(state.combo + 1);
+
+      setTimeout(() => {
+        if (word.el.parentNode) word.el.remove();
+      }, 400);
+
+      // 점수
+      const bonus = state.combo >= 2 ? Math.floor(state.combo * 1.5) : 1;
+      const pts = (10 + state.level * 5) * bonus;
+      state.score += pts;
+      state.scoreForLevel += pts;
+      state.combo++;
+
+      updateScore();
+      updateCombo();
+      updateProgress();
+      checkLevelUp();
+
+      wordInput.classList.add('correct-flash');
+      setTimeout(() => wordInput.classList.remove('correct-flash'), 200);
+      break;
+    }
+  }
+
+  if (!matched && typed.length > 0) {
+    sfxWrong();
+    wordInput.classList.add('wrong-flash');
+    setTimeout(() => wordInput.classList.remove('wrong-flash'), 300);
+    state.combo = 0;
+    updateCombo();
+  }
+
+  wordInput.value = '';
+}
+
+// ===== 파티클 =====
+function createParticles(el) {
+  const rect = el.getBoundingClientRect();
+  const areaRect = gameArea.getBoundingClientRect();
+  const cx = rect.left - areaRect.left + rect.width / 2;
+  const cy = rect.top - areaRect.top + rect.height / 2;
+
+  const colors = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff6fd8','#a29bfe','#fd9644','#55efc4'];
+  for (let i = 0; i < 12; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = Math.random() * 12 + 5;
+    const angle = (i / 12) * Math.PI * 2;
+    const dist = Math.random() * 60 + 30;
+    p.style.cssText = `
+      width:${size}px; height:${size}px;
+      left:${cx - size/2}px; top:${cy - size/2}px;
+      background:${colors[i % colors.length]};
+      --dx:${Math.cos(angle)*dist}px;
+      --dy:${Math.sin(angle)*dist}px;
+    `;
+    gameArea.appendChild(p);
+    setTimeout(() => p.remove(), 600);
+  }
+}
+
+// ===== 점수 팝업 =====
+function showScorePopup(el) {
+  const rect = el.getBoundingClientRect();
+  const areaRect = gameArea.getBoundingClientRect();
+  const popup = document.createElement('div');
+  popup.className = 'score-popup';
+  const pts = 10 + state.level * 5;
+  popup.textContent = state.combo >= 2 ? `+${pts} 🔥${state.combo}콤보!` : `+${pts}`;
+  popup.style.left = (rect.left - areaRect.left + rect.width/2 - 40) + 'px';
+  popup.style.top = (rect.top - areaRect.top) + 'px';
+  gameArea.appendChild(popup);
+  setTimeout(() => popup.remove(), 800);
+}
+
+// ===== UI 업데이트 =====
+function updateScore() { scoreEl.textContent = state.score; }
+function updateLives() {
+  const hearts = ['','❤️','❤️❤️','❤️❤️❤️'];
+  livesEl.textContent = hearts[Math.max(0, state.lives)] || '💔';
+}
+function updateProgress() {
+  const pct = Math.min((state.scoreForLevel / state.levelThreshold) * 100, 100);
+  progressBar.style.width = pct + '%';
+}
+function updateCombo() {
+  if (state.combo >= 2) {
+    comboDisplay.textContent = `🔥 ${state.combo}콤보!`;
+    comboDisplay.classList.add('visible');
+    clearTimeout(comboTimer);
+    comboTimer = setTimeout(() => comboDisplay.classList.remove('visible'), 1500);
+  } else {
+    comboDisplay.classList.remove('visible');
+  }
+}
+
+// ===== 레벨업 =====
+function checkLevelUp() {
+  if (state.scoreForLevel >= state.levelThreshold) {
+    state.scoreForLevel = 0;
+    state.level++;
+    state.levelThreshold = 300 + state.level * 100;
+    levelEl.textContent = state.level;
+    buildWordPool();
+    updateProgress();
+
+    // 속도 조정
+    state.words.forEach(w => { w.speed = 0.6 + (state.level - 1) * 0.35; });
+
+    // 스폰 간격 빠르게
+    clearInterval(state.spawnInterval);
+    const interval = Math.max(1200, 3000 - (state.level - 1) * 250);
+    state.spawnInterval = setInterval(spawnWord, interval);
+
+    sfxLevelUp();
+    // 레벨업 메시지
+    const msg = document.getElementById('levelup-text');
+    msg.textContent = `⭐ ${state.level}단계 돌입!`;
+    levelupOverlay.classList.add('show');
+    setTimeout(() => levelupOverlay.classList.remove('show'), 1800);
+  }
+}
+
+// ===== 게임오버 =====
+function gameOver() {
+  state.running = false;
+  cancelAnimationFrame(state.animFrame);
+  clearInterval(state.spawnInterval);
+
+  sfxGameOver();
+  stopBGM();
+  document.getElementById('final-score').textContent = `최종 점수: ${state.score}점 🏆`;
+  document.getElementById('final-level').textContent = `최고 단계: ${state.level}단계`;
+  gameoverOverlay.classList.add('show');
+}
+
+// ===== 게임 시작 / 리셋 =====
+function startGame() {
+  // 기존 단어 제거
+  gameArea.innerHTML = '';
+  state = {
+    running: true, score: 0, level: 1, lives: 3, combo: 0,
+    words: [], spawnInterval: null, animFrame: null,
+    levelThreshold: 300, scoreForLevel: 0,
+    wordPool: [], usedWords: new Set(),
+  };
+  buildWordPool();
+  updateScore();
+  updateLives();
+  updateProgress();
+  levelEl.textContent = 1;
+  comboDisplay.classList.remove('visible');
+
+  sfxStart();
+  startOverlay.style.display = 'none';
+  gameoverOverlay.classList.remove('show');
+
+  const interval = 3000;
+  spawnWord();
+  state.spawnInterval = setInterval(spawnWord, interval);
+  gameLoop();
+
+  wordInput.focus();
+  setTimeout(startBGM, 600);
+}
+
+// ===== 이벤트 =====
+document.getElementById('start-btn').addEventListener('click', startGame);
+document.getElementById('restart-btn').addEventListener('click', startGame);
+document.getElementById('submit-btn').addEventListener('click', checkInput);
+
+wordInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') checkInput();
+  else if (e.key.length === 1) sfxType();
+});
+
+// 실시간 입력 하이라이트
+wordInput.addEventListener('input', () => {
+  const typed = wordInput.value.trim();
+  state.words.forEach(word => {
+    if (word.text.startsWith(typed) && typed.length > 0) {
+      word.el.style.filter = 'brightness(1.3)';
+      word.el.style.transform = 'scale(1.05)';
+    } else {
+      word.el.style.filter = '';
+      word.el.style.transform = '';
+    }
+  });
+});
+
+// ===== 초기화 =====
+createStars();
+</script>
+</body>
+</html>

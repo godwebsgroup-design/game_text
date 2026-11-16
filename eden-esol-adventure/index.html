@@ -2,6 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>이든 &amp; 이솔 어드벤처</title>
 <style>
@@ -52,7 +54,7 @@
   #title.picked #flash { animation: flash .5s ease-out; }
   @keyframes flash { 0% { opacity: .95; } 100% { opacity: 0; } }
   #title.picked .logo, #title.picked .hint, #title.picked .blink, #title.picked #cont, #title.picked .hud-top { opacity: 0; }
-  .hud-top { position: absolute; top: 2.2cqmin; left: 0; right: 0; z-index: 4; display: flex; justify-content: space-between; padding: 0 9cqmin;
+  .hud-top { position: absolute; top: 2.2cqmin; left: 0; right: 0; z-index: 4; display: flex; justify-content: space-between; padding: 0 18cqmin 0 4cqmin;
     font-size: 2.6cqmin; color: #fff; letter-spacing: .08em; text-shadow: .25cqmin .25cqmin 0 #000; pointer-events: none; }
   .hud-top b { color: #ffe14a; font-weight: 400; }
   .logo, .blink, .hint, #cont { position: relative; z-index: 4; pointer-events: none; }
@@ -81,6 +83,9 @@
   .btn:active { transform: translate(.4cqmin, .4cqmin); box-shadow: .3cqmin .3cqmin 0 #000; }
   #mute { position: absolute; top: 1.6cqmin; right: 1.6cqmin; z-index: 12; width: 6.5cqmin; height: 6.5cqmin;
     border: .4cqmin solid #fff; background: rgba(19, 10, 58, .7); color: #fff; font: inherit; font-size: 3cqmin; cursor: pointer; }
+  #fs { position: absolute; top: 1.6cqmin; right: 9.6cqmin; z-index: 12; width: 6.5cqmin; height: 6.5cqmin;
+    border: .4cqmin solid #fff; background: rgba(19, 10, 58, .7); color: #fff; font: inherit; font-size: 3cqmin; cursor: pointer; }
+  #fs.hidden { display: none; }
   #touch { position: absolute; inset: auto 0 0 0; z-index: 11; display: none; justify-content: space-between; padding: 2cqmin 3cqmin; pointer-events: none; }
   #touch.on { display: flex; }
   #touch div { display: flex; gap: 2.5cqmin; }
@@ -119,6 +124,7 @@
   </div>
 
   <button id="mute" aria-label="음악 켜기/끄기">♪</button>
+  <button id="fs" aria-label="전체 화면 켜기/끄기">⛶</button>
   <div id="touch">
     <div><button data-k="left">◀</button><button data-k="right">▶</button></div>
     <div><button data-k="fire">✹</button><button data-k="jump">▲</button></div>
@@ -141,7 +147,7 @@
 
   // ---------- assets (all generated with Higgsfield) ----------
   const img = {};
-  const V = '?v=15';                                   // bump when assets change so browsers don't show stale images
+  const V = '?v=16';                                   // bump when assets change so browsers don't show stale images
   const load = (k, src) => { img[k] = new Image(); img[k].src = 'assets/' + src + V; };
   ['slime', 'star', 'flag', 'grass', 'dirt', 'block', 'mushroom', 'pepper', 'mom_idle', 'mom_attack', 'mom_win'].forEach(n => load(n, n + '.png'));
   ['bg', 'bg2', 'bg3', 'bg4'].forEach(n => load(n, n + '.jpg'));
@@ -695,6 +701,19 @@
   $('retry').addEventListener('click', () => startGame(hero, stage >= LAST && $('endPic').style.display === 'block' ? 1 : stage));
   $('home').addEventListener('click', () => { sfx.cursor(); showTitle(); });
   $('mute').addEventListener('click', e => { setMuted(!muted); e.currentTarget.blur(); });
+  // fullscreen toggle (on phones it also tries to turn the screen sideways)
+  const fsRoot = document.documentElement, fsReq = fsRoot.requestFullscreen || fsRoot.webkitRequestFullscreen;
+  const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+  if (!fsReq) $('fs').classList.add('hidden');                      // e.g. iPhone Safari: use "Add to Home Screen" instead
+  $('fs').addEventListener('click', async e => {
+    e.currentTarget.blur();
+    try {
+      if (fsEl()) await (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      else { await fsReq.call(fsRoot); if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); }
+    } catch (err) {}
+  });
+  const fsSync = () => { $('fs').textContent = fsEl() ? '✕' : '⛶'; fit(); };
+  document.addEventListener('fullscreenchange', fsSync); document.addEventListener('webkitfullscreenchange', fsSync);
   showTitle();
 
   // ---------- input ----------

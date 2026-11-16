@@ -155,7 +155,7 @@
 
   // ---------- assets (all generated with Higgsfield) ----------
   const img = {};
-  const V = '?v=17';                                   // bump when assets change so browsers don't show stale images
+  const V = '?v=18';                                   // bump when assets change so browsers don't show stale images
   const load = (k, src) => { img[k] = new Image(); img[k].src = 'assets/' + src + V; };
   ['slime', 'star', 'flag', 'grass', 'dirt', 'block', 'mushroom', 'pepper', 'mom_idle', 'mom_attack', 'mom_win'].forEach(n => load(n, n + '.png'));
   ['bg', 'bg2', 'bg3', 'bg4'].forEach(n => load(n, n + '.jpg'));
@@ -716,11 +716,11 @@
   const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
   addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; $('install').classList.remove('hidden'); });
   addEventListener('appinstalled', () => $('install').classList.add('hidden'));
-  if (isIOS && !standalone) $('install').classList.remove('hidden');
+  if (!standalone) $('install').classList.remove('hidden');
   $('install').addEventListener('click', async () => {
     if (installEvt) { installEvt.prompt(); await installEvt.userChoice.catch(() => {}); installEvt = null; $('install').classList.add('hidden'); }
-    else alert('아래 공유 버튼(네모에 화살표)을 누른 뒤
-"홈 화면에 추가"를 선택하세요.');
+    else alert(isIOS ? '아래 공유 버튼(네모에 화살표)을 누른 뒤 "홈 화면에 추가"를 선택하세요.'
+      : '브라우저 메뉴(⋮)에서 "앱 설치" 또는 "홈 화면에 추가"를 선택하세요. PC 크롬은 주소창 오른쪽의 설치 아이콘을 눌러도 됩니다.');
   });
   // fullscreen toggle (on phones it also tries to turn the screen sideways)
   const fsRoot = document.documentElement, fsReq = fsRoot.requestFullscreen || fsRoot.webkitRequestFullscreen;

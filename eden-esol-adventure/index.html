@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="icon" href="assets/icon-192.png">
+<meta name="theme-color" content="#07050f">
+<meta name="apple-mobile-web-app-title" content="이든&amp;이솔">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>이든 &amp; 이솔 어드벤처</title>
 <style>
@@ -65,6 +70,8 @@
   .blink { color: #fff; font-size: 3.4cqmin; letter-spacing: .14em; text-shadow: .3cqmin .3cqmin 0 #000; animation: blink 1s steps(1) infinite; }
   @keyframes blink { 50% { opacity: 0; } }
   .hint { font-size: 2.3cqmin; color: #e9e4ff; text-shadow: .25cqmin .25cqmin 0 #000; }
+  #install { position: relative; z-index: 4; font: inherit; font-size: 2.6cqmin; padding: .9cqmin 2.4cqmin; cursor: pointer; background: #ffe14a; color: #130a3a; border: .4cqmin solid #fff; box-shadow: .5cqmin .5cqmin 0 #000; }
+  #install.hidden, #title.picked #install { display: none; }
   #cont { display: flex; gap: 2cqmin; pointer-events: auto; }
   #cont.hidden { display: none; }
   #cont button { font: inherit; font-size: 2.6cqmin; padding: .9cqmin 2.4cqmin; cursor: pointer; background: rgba(0,0,0,.65); color: #bbb; border: .4cqmin solid #777; }
@@ -112,6 +119,7 @@
     <p class="blink">▶ SELECT PLAYER ◀</p>
     <div id="cont" class="hidden"><button id="contYes" aria-pressed="true"></button><button id="contNo" aria-pressed="false">1판부터</button></div>
     <p class="hint">← → 이동 · 스페이스 점프 · X 불 쏘기 · C 교대 · M 소리</p>
+    <button id="install" class="hidden">홈 화면에 추가</button>
     <div id="goText">가보자!!</div>
     <div id="flash"></div>
   </div>
@@ -147,7 +155,7 @@
 
   // ---------- assets (all generated with Higgsfield) ----------
   const img = {};
-  const V = '?v=16';                                   // bump when assets change so browsers don't show stale images
+  const V = '?v=17';                                   // bump when assets change so browsers don't show stale images
   const load = (k, src) => { img[k] = new Image(); img[k].src = 'assets/' + src + V; };
   ['slime', 'star', 'flag', 'grass', 'dirt', 'block', 'mushroom', 'pepper', 'mom_idle', 'mom_attack', 'mom_win'].forEach(n => load(n, n + '.png'));
   ['bg', 'bg2', 'bg3', 'bg4'].forEach(n => load(n, n + '.jpg'));
@@ -701,6 +709,19 @@
   $('retry').addEventListener('click', () => startGame(hero, stage >= LAST && $('endPic').style.display === 'block' ? 1 : stage));
   $('home').addEventListener('click', () => { sfx.cursor(); showTitle(); });
   $('mute').addEventListener('click', e => { setMuted(!muted); e.currentTarget.blur(); });
+  // "Add to Home Screen": Android/desktop Chrome give us an install prompt; iPhone needs the Share menu
+  let installEvt = null;
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+  const standalone = matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches || navigator.standalone;
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; $('install').classList.remove('hidden'); });
+  addEventListener('appinstalled', () => $('install').classList.add('hidden'));
+  if (isIOS && !standalone) $('install').classList.remove('hidden');
+  $('install').addEventListener('click', async () => {
+    if (installEvt) { installEvt.prompt(); await installEvt.userChoice.catch(() => {}); installEvt = null; $('install').classList.add('hidden'); }
+    else alert('아래 공유 버튼(네모에 화살표)을 누른 뒤
+"홈 화면에 추가"를 선택하세요.');
+  });
   // fullscreen toggle (on phones it also tries to turn the screen sideways)
   const fsRoot = document.documentElement, fsReq = fsRoot.requestFullscreen || fsRoot.webkitRequestFullscreen;
   const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
